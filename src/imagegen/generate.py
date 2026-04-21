@@ -4,12 +4,17 @@ import base64
 import sys
 from pathlib import Path
 
+from collections.abc import Callable
+from typing import Any
+
 from google import genai
 from google.genai import types
 from PIL import Image
 
 
-def _build_grounding_tools(grounding: str | None) -> list[types.Tool] | None:
+def _build_grounding_tools(
+    grounding: str | None,
+) -> list[types.Tool | Callable[..., Any]] | None:
     if grounding is None:
         return None
     if grounding == "image-search":
@@ -40,10 +45,11 @@ def build_config(
     image_size: str | None = None,
     grounding: str | None = None,
 ) -> types.GenerateContentConfig:
+    tools = _build_grounding_tools(grounding)
     return types.GenerateContentConfig(
         response_modalities=["IMAGE", "TEXT"],
         image_config=build_image_config(aspect_ratio, image_size),
-        tools=_build_grounding_tools(grounding),
+        tools=tools,
     )
 
 
@@ -118,9 +124,15 @@ def edit_image(
 
     pil_images = [Image.open(img_path) for img_path in images]
 
+    contents: list[
+        str | Image.Image | types.File | types.FileDict | types.Part | types.PartDict
+    ] = [
+        prompt,
+        *pil_images,
+    ]
     response = client.models.generate_content(
         model=model_name,
-        contents=[prompt, *pil_images],
+        contents=contents,
         config=build_config(aspect_ratio, image_size, grounding),
     )
 
