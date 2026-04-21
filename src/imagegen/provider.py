@@ -14,7 +14,7 @@ EXAMPLE_FILENAME = "provider.json.example"
 APP_NAME = "imagegen"
 
 
-def _user_config_dir() -> Path:
+def user_config_dir() -> Path:
     """Return the platform-specific user configuration directory for imagegen.
 
     - Linux / macOS: ~/.config/imagegen
@@ -40,7 +40,7 @@ def _find_provider_file() -> Path:
         return local_path
 
     # Level 2 — user config directory
-    user_path = _user_config_dir() / PROVIDER_FILENAME
+    user_path = user_config_dir() / PROVIDER_FILENAME
     if user_path.is_file():
         return user_path
 
@@ -56,7 +56,7 @@ def _get_example_path() -> Path:
 
 def ensure_user_config() -> Path:
     """Copy provider.json.example to the user config dir if provider.json is absent."""
-    user_dir = _user_config_dir()
+    user_dir = user_config_dir()
     user_path = user_dir / PROVIDER_FILENAME
 
     if user_path.is_file():
@@ -92,7 +92,53 @@ def load_providers() -> list[dict[str, Any]]:
     return data.get("providers", [])
 
 
-def resolve_model(provider_model: str) -> tuple[str, str, str, str]:
+DEFAULT_ASPECT_RATIOS = [
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9",
+]
+DEFAULT_IMAGE_SIZES = ["1K"]
+
+
+def _get_model_options(model_info: dict[str, Any]) -> dict[str, Any]:
+    """Return the model options dict with defaults applied for missing keys."""
+    options: dict[str, Any] = model_info.get("options", {})
+    return {
+        "aspect_ratio": options.get("aspect_ratio", DEFAULT_ASPECT_RATIOS),
+        "image_size": options.get("image_size", DEFAULT_IMAGE_SIZES),
+        "grounding": options.get("grounding", []),
+    }
+
+
+def validate_option(
+    value: str,
+    allowed: list[str],
+    option_name: str,
+    model_key: str,
+) -> None:
+    if value not in allowed:
+        available = ", ".join(allowed)
+        print(
+            f"Error: {option_name} '{value}' is not supported by model '{model_key}'. "
+            f"Accepted: {available}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
+def resolve_model(provider_model: str) -> tuple[str, str, str, str, dict[str, Any]]:
+    """Resolve a 'provider/model' spec into connection details and model options.
+
+    Returns:
+        (base_url, model_key, display_name, api_key, options)
+    """
     parts = provider_model.split("/", maxsplit=1)
     if len(parts) != 2:
         print(
@@ -122,4 +168,13 @@ def resolve_model(provider_model: str) -> tuple[str, str, str, str]:
         )
         sys.exit(1)
 
-    return provider["baseUrl"], model_key, models[model_key]["name"], provider["apiKey"]
+    model_info = models[model_key]
+    options = _get_model_options(model_info)
+
+    return (
+        provider["baseUrl"],
+        model_key,
+        model_info["name"],
+        provider["apiKey"],
+        options,
+    )

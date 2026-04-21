@@ -6,7 +6,12 @@
             "apiKey": "",
             "models": {
                 "model-key": {
-                    "name": "Model Display Name"
+                    "name": "Model Display Name",
+                    "options": {
+                        "aspect_ratio": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
+                        "image_size": ["1K"],
+                        "grounding": []
+                    }
                 }
             }
         }
