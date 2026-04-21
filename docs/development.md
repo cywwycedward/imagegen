@@ -160,6 +160,12 @@ imagegen (Group)
 - 对话中可通过斜杠指令动态覆盖当前轮次的宽高比或分辨率选项。
 - 生成的图像自动按轮次保存为 `turn_001.png`, `turn_002.png` 格式。
 
+#### 内部辅助函数
+
+| 函数 | 签名 | 职责 |
+|------|------|------|
+| `_validate_generate_options()` | `(model_name, options, aspect_ratio, image_size, grounding) -> None` | 对 `generate`/`edit`/`chat` 命令的选项统一校验，调用 `validate_option` 逐项检查 |
+
 ### 4. `provider.py` — 提供商管理
 
 #### 配置文件查找策略
@@ -193,11 +199,22 @@ def _find_provider_file() -> Path:
 |------|------|------|
 | `user_config_dir()` | `() -> Path` | 返回平台相关的用户配置目录 |
 | `_find_provider_file()` | `() -> Path` | 三级回退查找 provider.json |
+| `_get_example_path()` | `() -> Path` | 通过 `importlib.resources` 定位包内 `provider.json.example` |
 | `ensure_user_config()` | `() -> Path` | 首次运行时复制示例配置 |
 | `load_providers()` | `() -> list[dict[str, Any]]` | 加载提供商列表 |
 | `resolve_model()` | `(provider_model: str) -> tuple[str, str, str, str, dict[str, Any]]` | 解析 provider/model，返回 (base_url, model_key, display_name, api_key, options) |
 | `get_model_options()` | `(model_info: dict) -> dict[str, Any]` | 提取模型选项，缺失时应用默认值 |
 | `validate_option()` | `(value, allowed, option_name, model_key) -> None` | 验证选项值，无效时 exit(1) |
+
+#### 模块常量
+
+| 常量 | 值 | 用途 |
+|------|---|------|
+| `PROVIDER_FILENAME` | `"provider.json"` | 配置文件名 |
+| `EXAMPLE_FILENAME` | `"provider.json.example"` | 包内示例配置文件名 |
+| `APP_NAME` | `"imagegen"` | 应用名，用于 `importlib.resources` 和配置目录 |
+| `DEFAULT_ASPECT_RATIOS` | 10 种标准比例列表 | 模型未指定 `aspect_ratio` 时的默认值 |
+| `DEFAULT_IMAGE_SIZES` | `["1K"]` | 模型未指定 `image_size` 时的默认值 |
 
 #### `resolve_model` 流程
 
@@ -205,12 +222,14 @@ def _find_provider_file() -> Path:
 输入: "my-provider/gemini-2.5-flash-image"
   │
   ├── split("/") → provider_name="my-provider", model_key="gemini-2.5-flash-image"
+  │   └── 格式不匹配 → stderr 提示正确格式 + exit(1)
   │
   ├── 在 providers 中查找 name == provider_name
   │   └── 未找到 → stderr 输出可用提供商列表 + exit(1)
   │
   └── 在 provider.models 中查找 model_key
-      ├── 找到 → 返回 (baseUrl, models[key]["name"], key)
+      ├── 找到 → get_model_options(model_info) 提取选项
+      │         → 返回 (base_url, model_key, display_name, api_key, options)
       └── 未找到 → stderr 输出可用模型列表 + exit(1)
 ```
 
@@ -296,6 +315,12 @@ parts = content.parts if content else None
 ### 7. `session.py` — 会话管理
 
 负责持久化管理多轮对话上下文。
+
+#### 模块常量
+
+| 常量 | 值 | 用途 |
+|------|---|------|
+| `SESSIONS_DIR_NAME` | `"sessions"` | 会话存储子目录名，位于 `user_config_dir()` 下 |
 
 | 函数 | 签名 | 职责 |
 |------|------|------|
@@ -1028,7 +1053,7 @@ def stylized(prompt: str, model_spec: str, output: str, style: str) -> None:
 @click.option("--style", help="Image style")
 ```
 
-3. 在 `provider.py` 的 `_get_model_options` 与 `validate_option` 中注册支持。
+3. 在 `provider.py` 的 `get_model_options` 与 `validate_option` 中注册支持。
 
 4. 传递到生成逻辑配置：
 
