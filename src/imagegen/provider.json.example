@@ -1,0 +1,14 @@
+{
+    "providers": [
+        {
+            "name": "example-provider",
+            "baseUrl": "https://api.example.com",
+            "apiKey": "",
+            "models": {
+                "model-key": {
+                    "name": "Model Display Name"
+                }
+            }
+        }
+    ]
+}
