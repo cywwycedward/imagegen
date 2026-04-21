@@ -107,7 +107,7 @@ DEFAULT_ASPECT_RATIOS = [
 DEFAULT_IMAGE_SIZES = ["1K"]
 
 
-def _get_model_options(model_info: dict[str, Any]) -> dict[str, Any]:
+def get_model_options(model_info: dict[str, Any]) -> dict[str, Any]:
     """Return the model options dict with defaults applied for missing keys."""
     options: dict[str, Any] = model_info.get("options", {})
     return {
@@ -169,7 +169,7 @@ def resolve_model(provider_model: str) -> tuple[str, str, str, str, dict[str, An
         sys.exit(1)
 
     model_info = models[model_key]
-    options = _get_model_options(model_info)
+    options = get_model_options(model_info)
 
     return (
         provider["baseUrl"],

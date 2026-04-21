@@ -9,6 +9,7 @@ from rich.table import Table
 from imagegen.chat import run_chat
 from imagegen.generate import edit_image, generate_image
 from imagegen.provider import (
+    get_model_options,
     ensure_user_config,
     load_providers,
     resolve_model,
@@ -35,7 +36,12 @@ def provider_init() -> None:
 
 @provider.command(name="list")
 @click.option("--model", is_flag=True, help="Show models with their providers")
-def provider_list(model: bool) -> None:
+@click.option(
+    "--options",
+    is_flag=True,
+    help="Show supported options for each model (implies --model)",
+)
+def provider_list(model: bool, options: bool) -> None:
     console = Console()
     providers = load_providers()
 
@@ -43,7 +49,25 @@ def provider_list(model: bool) -> None:
         console.print("[yellow]No providers configured in provider.json[/yellow]")
         return
 
-    if model:
+    if options:
+        table = Table(show_header=True)
+        table.add_column("Model ID", style="cyan")
+        table.add_column("Provider", style="green")
+        table.add_column("Aspect Ratio", style="yellow")
+        table.add_column("Image Size", style="yellow")
+        table.add_column("Grounding", style="yellow")
+        for p in providers:
+            for model_key, model_info in p.get("models", {}).items():
+                opts = get_model_options(model_info)
+                table.add_row(
+                    model_key,
+                    p["name"],
+                    ", ".join(opts["aspect_ratio"]),
+                    ", ".join(opts["image_size"]),
+                    ", ".join(opts["grounding"]) or "-",
+                )
+        console.print(table)
+    elif model:
         table = Table(show_header=True)
         table.add_column("Model ID", style="cyan")
         table.add_column("Model Name", style="yellow")

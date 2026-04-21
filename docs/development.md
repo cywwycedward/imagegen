@@ -98,7 +98,7 @@ if __name__ == "__main__":
 imagegen (Group)
 ├── provider (SubGroup)
 │   ├── init
-│   ├── list [--model]
+│   ├── list [--model] [--options]
 │   └── sessions
 ├── generate <prompt> <model_spec> <output> [--aspect-ratio] [--image-size] [--grounding]
 ├── edit <prompt> <model_spec> <output> --image <path>... [--aspect-ratio] [--image-size] [--grounding]
@@ -109,6 +109,7 @@ imagegen (Group)
 
 - **默认模式**: 显示所有已配置提供商名称（单列表格）
 - **`--model` 标志**: 显示双列表格 — 模型名称 + 提供商名称
+- **`--options` 标志**: 显示各模型支持的参数选项（aspect_ratio、image_size、grounding），隐含 `--model`
 - **空配置提示**: 当 `provider.json` 中没有提供商时，输出黄色警告信息
 - **渲染**: 使用 `rich.Table` 格式化输出
 
@@ -129,8 +130,6 @@ imagegen (Group)
 | `--aspect-ratio` | 选项 | 否 | 图像宽高比 | `--aspect-ratio 16:9` |
 | `--image-size` | 选项 | 否 | 图像分辨率 | `--image-size 2K` |
 | `--grounding` | 选项 | 否 | 搜索增强 | `--grounding google-search` |
-
-**设计决策**: 移除 `api` 位置参数，改由 `provider.json` 统一管理 API key。核心输入保持全位置参数设计，以简化快速调用体验。
 
 #### `edit` 命令
 
@@ -197,7 +196,7 @@ def _find_provider_file() -> Path:
 | `ensure_user_config()` | `() -> Path` | 首次运行时复制示例配置 |
 | `load_providers()` | `() -> list[dict[str, Any]]` | 加载提供商列表 |
 | `resolve_model()` | `(provider_model: str) -> tuple[str, str, str, str, dict[str, Any]]` | 解析 provider/model，返回 (base_url, model_key, display_name, api_key, options) |
-| `_get_model_options()` | `(model_info: dict) -> dict[str, Any]` | 提取模型选项，缺失时应用默认值 |
+| `get_model_options()` | `(model_info: dict) -> dict[str, Any]` | 提取模型选项，缺失时应用默认值 |
 | `validate_option()` | `(value, allowed, option_name, model_key) -> None` | 验证选项值，无效时 exit(1) |
 
 #### `resolve_model` 流程
@@ -906,6 +905,9 @@ imagegen provider list
 # 列出所有模型及其提供商
 imagegen provider list --model
 
+# 列出所有模型支持的参数选项
+imagegen provider list --options
+
 # 列出所有对话会话记录
 imagegen provider sessions
 ```
@@ -1059,6 +1061,7 @@ uv run mypy src/
 - [x] `uv run imagegen --help` — 显示 `generate`, `edit`, `chat` 和 `provider` 命令
 - [x] `uv run imagegen provider list` — 空配置时显示警告
 - [x] `uv run imagegen provider list --model` — 空配置时显示警告
+- [x] `uv run imagegen provider list --options` — 显示各模型支持的参数选项
 - [x] `uv run imagegen provider sessions` — 显示会话列表
 - [x] `uv run imagegen generate --help` — 显示 3 个位置参数和选项
 - [x] `uv run imagegen edit --help` — 显示 edit 命令参数及 `--image`
