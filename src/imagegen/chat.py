@@ -118,7 +118,14 @@ def run_chat(
 
         prompt_text, input_images = _parse_input(stripped)
 
-        contents: list[str | Image.Image] = []
+        contents: list[
+            str
+            | Image.Image
+            | types.File
+            | types.FileDict
+            | types.Part
+            | types.PartDict
+        ] = []
         if prompt_text:
             contents.append(prompt_text)
         for img_path in input_images:
