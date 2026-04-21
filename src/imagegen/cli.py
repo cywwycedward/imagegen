@@ -45,11 +45,12 @@ def provider_list(model: bool) -> None:
 
     if model:
         table = Table(show_header=True)
-        table.add_column("Model", style="cyan")
+        table.add_column("Model ID", style="cyan")
+        table.add_column("Model Name", style="yellow")
         table.add_column("Provider", style="green")
         for p in providers:
             for model_key, model_info in p.get("models", {}).items():
-                table.add_row(model_info.get("name", model_key), p["name"])
+                table.add_row(model_key, model_info.get("name", model_key), p["name"])
         console.print(table)
     else:
         table = Table(show_header=True)
