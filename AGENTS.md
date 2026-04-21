@@ -100,3 +100,8 @@ uv run mypy src/
 # Test (empty suite)
 uv run pytest
 ```
+
+## MUST TO DO
+
+1. 开发请遵循 `docs/development.md` 中的开发规范。
+2. 每次完成请求中的代码修改后，进行项目的 git 管理（add、commit 等）。
