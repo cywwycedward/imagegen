@@ -3,6 +3,7 @@ name = "imagegen"
 version = "0.1.0"
 description = "CLI tool for generating images using NanoBanana API providers"
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
 dependencies = [
     "click>=8.1.0",
