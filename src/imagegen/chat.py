@@ -9,7 +9,7 @@ from google.genai import types
 from PIL import Image
 from rich.console import Console
 
-from imagegen.generate import build_config, build_image_config
+from imagegen.backends.genai import build_config, build_image_config
 from imagegen.session import create_session, load_session, save_turn
 
 

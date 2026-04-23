@@ -13,13 +13,26 @@ PROVIDER_FILENAME = "provider.json"
 EXAMPLE_FILENAME = "provider.json.example"
 APP_NAME = "imagegen"
 
+GENAI_OPTION_KEYS = ("aspect_ratio", "image_size", "grounding")
+OPENAI_OPTION_KEYS = ("size", "quality", "background", "style")
+ALL_OPTION_KEYS = (*GENAI_OPTION_KEYS, *OPENAI_OPTION_KEYS)
+
+DEFAULT_ASPECT_RATIOS = [
+    "1:1",
+    "2:3",
+    "3:2",
+    "3:4",
+    "4:3",
+    "4:5",
+    "5:4",
+    "9:16",
+    "16:9",
+    "21:9",
+]
+DEFAULT_IMAGE_SIZES = ["1K"]
+
 
 def user_config_dir() -> Path:
-    """Return the platform-specific user configuration directory for imagegen.
-
-    - Linux / macOS: ~/.config/imagegen
-    - Windows:       %APPDATA%/imagegen  (e.g. C:/Users/<user>/AppData/Roaming/imagegen)
-    """
     if platform.system() == "Windows":
         base = Path.home() / "AppData" / "Roaming"
     else:
@@ -28,23 +41,14 @@ def user_config_dir() -> Path:
 
 
 def _find_provider_file() -> Path:
-    """Locate provider.json using a two-level fallback with auto-setup.
-
-    1. Project-local:  <CWD>/.imagegen/provider.json
-    2. User config:    <user_config_dir>/provider.json  (platform-dependent)
-       → If missing, copies provider.json.example here on first run.
-    """
-    # Level 1 — project-local
     local_path = Path.cwd() / ".imagegen" / PROVIDER_FILENAME
     if local_path.is_file():
         return local_path
 
-    # Level 2 — user config directory
     user_path = user_config_dir() / PROVIDER_FILENAME
     if user_path.is_file():
         return user_path
 
-    # Level 2 miss → first-run: copy example to user config dir
     user_path = ensure_user_config()
     return user_path
 
@@ -55,7 +59,6 @@ def _get_example_path() -> Path:
 
 
 def ensure_user_config() -> Path:
-    """Copy provider.json.example to the user config dir if provider.json is absent."""
     user_dir = user_config_dir()
     user_path = user_dir / PROVIDER_FILENAME
 
@@ -92,28 +95,31 @@ def load_providers() -> list[dict[str, Any]]:
     return data.get("providers", [])
 
 
-DEFAULT_ASPECT_RATIOS = [
-    "1:1",
-    "2:3",
-    "3:2",
-    "3:4",
-    "4:3",
-    "4:5",
-    "5:4",
-    "9:16",
-    "16:9",
-    "21:9",
-]
-DEFAULT_IMAGE_SIZES = ["1K"]
-
-
-def get_model_options(model_info: dict[str, Any]) -> dict[str, Any]:
-    """Return the model options dict with defaults applied for missing keys."""
+def get_model_options(
+    model_info: dict[str, Any],
+    backend: str = "genai",
+) -> dict[str, list[str]]:
     options: dict[str, Any] = model_info.get("options", {})
+
+    if backend == "openai":
+        return {
+            "aspect_ratio": [],
+            "image_size": [],
+            "grounding": [],
+            "size": options.get("size", []),
+            "quality": options.get("quality", []),
+            "background": options.get("background", []),
+            "style": options.get("style", []),
+        }
+
     return {
         "aspect_ratio": options.get("aspect_ratio", DEFAULT_ASPECT_RATIOS),
         "image_size": options.get("image_size", DEFAULT_IMAGE_SIZES),
         "grounding": options.get("grounding", []),
+        "size": [],
+        "quality": [],
+        "background": [],
+        "style": [],
     }
 
 
@@ -133,12 +139,24 @@ def validate_option(
         sys.exit(1)
 
 
-def resolve_model(provider_model: str) -> tuple[str, str, str, str, dict[str, Any]]:
-    """Resolve a 'provider/model' spec into connection details and model options.
+def validate_backend_option(
+    value: object,
+    option_name: str,
+    backend: str,
+    expected_backend: str,
+) -> None:
+    if value is not None and backend != expected_backend:
+        print(
+            f"Error: {option_name} is not supported by {backend} backend. "
+            f"This option is only available for {expected_backend} models.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
-    Returns:
-        (base_url, model_key, display_name, api_key, options)
-    """
+
+def resolve_model(
+    provider_model: str,
+) -> tuple[str, str, str, str, str, dict[str, list[str]]]:
     parts = provider_model.split("/", maxsplit=1)
     if len(parts) != 2:
         print(
@@ -169,9 +187,11 @@ def resolve_model(provider_model: str) -> tuple[str, str, str, str, dict[str, An
         sys.exit(1)
 
     model_info = models[model_key]
-    options = get_model_options(model_info)
+    backend = provider.get("backend", "genai")
+    options = get_model_options(model_info, backend)
 
     return (
+        backend,
         provider["baseUrl"],
         model_key,
         model_info["name"],

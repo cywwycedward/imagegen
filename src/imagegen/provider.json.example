@@ -1,7 +1,8 @@
 {
     "providers": [
         {
-            "name": "example-provider",
+            "name": "example-genai-provider",
+            "backend": "genai",
             "baseUrl": "https://api.example.com",
             "apiKey": "",
             "models": {
@@ -11,6 +12,23 @@
                         "aspect_ratio": ["1:1", "2:3", "3:2", "3:4", "4:3", "4:5", "5:4", "9:16", "16:9", "21:9"],
                         "image_size": ["1K"],
                         "grounding": []
+                    }
+                }
+            }
+        },
+        {
+            "name": "example-openai-provider",
+            "backend": "openai",
+            "baseUrl": "",
+            "apiKey": "",
+            "models": {
+                "gpt-image-2": {
+                    "name": "GPT Image 2",
+                    "options": {
+                        "size": ["auto", "1024x1024", "1536x1024", "1024x1536"],
+                        "quality": ["auto", "low", "medium", "high"],
+                        "background": ["auto", "transparent", "opaque"],
+                        "style": []
                     }
                 }
             }

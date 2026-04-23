@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import base64
 import sys
-from pathlib import Path
-
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from google import genai
@@ -82,7 +81,7 @@ def _extract_image(response: types.GenerateContentResponse, output: Path) -> Non
     sys.exit(1)
 
 
-def generate_image(
+def generate(
     prompt: str,
     base_url: str,
     model_name: str,
@@ -106,7 +105,7 @@ def generate_image(
     _extract_image(response, output)
 
 
-def edit_image(
+def edit(
     prompt: str,
     images: list[Path],
     base_url: str,
