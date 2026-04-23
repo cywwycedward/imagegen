@@ -11,7 +11,12 @@ from openai import OpenAI
 
 def _build_client(api_key: str, base_url: str) -> OpenAI:
     if base_url:
-        return OpenAI(api_key=api_key, base_url=base_url)
+        # OpenAI SDK replaces entire default base_url; ensure /v1 suffix
+        # so requests hit /v1/images/generations (not /images/generations).
+        url = base_url.rstrip("/")
+        if not url.endswith("/v1"):
+            url += "/v1"
+        return OpenAI(api_key=api_key, base_url=url)
     return OpenAI(api_key=api_key)
 
 
@@ -44,6 +49,7 @@ def generate(
     kwargs: dict[str, Any] = {
         "model": model_name,
         "prompt": prompt,
+        "response_format": "b64_json",
     }
     if size is not None:
         kwargs["size"] = size
@@ -104,6 +110,7 @@ def edit(
             "model": model_name,
             "prompt": prompt,
             "image": image_files if len(image_files) > 1 else image_files[0],
+            "response_format": "b64_json",
         }
         if size is not None:
             kwargs["size"] = size
