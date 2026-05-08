@@ -18,11 +18,13 @@
 imagegen/
 ├── pyproject.toml              # 项目元数据、依赖、入口点、构建系统配置
 ├── README.md                   # 用户级使用文档
-├── provider.json               # 提供商配置文件（API 端点、模型映射）
 ├── .gitignore                  # Git 忽略规则
-├── uv.lock                     # uv 锁定文件（44 个包）
-├── docs/                       # 开发文档目录
-│   └── development.md          # 本文件
+├── uv.lock                     # uv 锁定文件
+├── docs/                       # 文档目录
+│   ├── development.md          # 本文件
+│   ├── configuration.md        # 配置参考
+│   ├── install.md              # 安装指南
+│   └── user-guide.md           # 用户指南
 ├── references/                 # NanoBanana 模型参考文档
 │   ├── nanobanana.md           # 基础模型文档
 │   ├── nanobanana-pro.md       # Pro 模型文档
@@ -31,16 +33,25 @@ imagegen/
 │   └── nanobanana-cookbook-guide.md  # SDK 使用指南
 ├── src/
 │   └── imagegen/
-│       ├── __init__.py         # 包初始化 + 版本号
+│       ├── __init__.py         # 包初始化 + 动态版本号 (importlib.metadata)
 │       ├── __main__.py         # python -m imagegen 支持
+│       ├── models.py           # ResolvedModel 数据类
 │       ├── cli.py              # CLI 命令定义（click）
 │       ├── provider.py         # 提供商配置加载与模型解析
-│       ├── generate.py         # 图像生成与编辑核心逻辑
 │       ├── chat.py             # 多轮对话 REPL 模式
 │       ├── session.py          # 会话管理（创建/加载/保存/列表）
+│       ├── backends/           # 后端实现
+│       │   ├── __init__.py     # 后端调度路由
+│       │   ├── genai.py        # Google GenAI 后端
+│       │   └── openai.py       # OpenAI 后端
 │       └── provider.json.example  # 提供商配置示例文件
 └── tests/
-    └── __init__.py             # 测试包初始化
+    ├── __init__.py             # 测试包初始化
+    ├── test_prompt_quotes.py   # CLI 参数传递测试
+    ├── test_provider.py        # 提供商配置测试
+    ├── test_session.py         # 会话管理测试
+    ├── test_backends_genai.py  # GenAI 后端测试
+    └── test_backends_openai.py # OpenAI 后端测试
 ```
 
 ---
@@ -229,20 +240,41 @@ def _find_provider_file() -> Path:
   │
   └── 在 provider.models 中查找 model_key
       ├── 找到 → get_model_options(model_info) 提取选项
-      │         → 返回 (base_url, model_key, display_name, api_key, options)
+      │         → 返回 ResolvedModel 数据类
       └── 未找到 → stderr 输出可用模型列表 + exit(1)
 ```
 
-### 5. `generate.py` — 图像生成
+### 5. `backends/` — 图像生成后端
+
+由三个文件组成的后端模块：
+
+#### `backends/__init__.py` — 后端调度
+
+| 函数 | 签名 | 职责 |
+|------|------|------|
+| `generate()` | `(backend, prompt, base_url, ...) -> None` | 根据 backend 路由到 genai 或 openai |
+| `edit()` | `(backend, prompt, images, ...) -> None` | 根据 backend 路由编辑请求 |
+
+#### `backends/genai.py` — Google GenAI 后端
 
 | 函数 | 签名 | 职责 |
 |------|------|------|
 | `_build_grounding_tools()` | `(grounding: str \| None) -> list[types.Tool] \| None` | 构建搜索增强工具列表 |
 | `build_image_config()` | `(aspect_ratio, image_size) -> types.ImageConfig \| None` | 构建图像配置 |
 | `build_config()` | `(aspect_ratio, image_size, grounding) -> GenerateContentConfig` | 构建完整生成配置 |
-| `_extract_image()` | `(response, output) -> None` | 从响应中提取图像并保存 |
-| `generate_image()` | `(..., aspect_ratio, image_size, grounding) -> None` | 文本到图像生成 |
-| `edit_image()` | `(prompt, images, ..., aspect_ratio, image_size, grounding) -> None` | 图像编辑（多图输入） |
+| `extract_parts()` | `(response) -> list[types.Part] \| None` | 从响应中提取 parts（null-safe） |
+| `extract_and_save_image()` | `(response, output) -> None` | 从响应中提取图像并保存 |
+| `generate()` | `(prompt, base_url, ...) -> None` | 文本到图像生成 |
+| `edit()` | `(prompt, images, ...) -> None` | 图像编辑（多图输入） |
+
+#### `backends/openai.py` — OpenAI 后端
+
+| 函数 | 签名 | 职责 |
+|------|------|------|
+| `_build_client()` | `(api_key, base_url) -> OpenAI` | 构建 OpenAI 客户端（自动追加 /v1） |
+| `_save_image()` | `(b64_json, output) -> None` | 解码 base64 图像并保存 |
+| `generate()` | `(prompt, base_url, ..., n) -> None` | 图像生成（支持 n 参数多图） |
+| `edit()` | `(prompt, images, ...) -> None` | 图像编辑 |
 
 #### API 调用流程
 
