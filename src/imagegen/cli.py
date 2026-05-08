@@ -212,13 +212,11 @@ def generate(
     num_images: int | None,
     style: str | None,
 ) -> None:
-    backend, base_url, model_name, _display_name, api_key, options = resolve_model(
-        model_spec
-    )
+    model = resolve_model(model_spec)
     _validate_generate_options(
-        model_name,
-        backend,
-        options,
+        model.model_name,
+        model.backend,
+        model.options,
         aspect_ratio=aspect_ratio,
         image_size=image_size,
         grounding=grounding,
@@ -229,11 +227,11 @@ def generate(
     )
 
     backend_generate(
-        backend=backend,
+        backend=model.backend,
         prompt=prompt,
-        base_url=base_url,
-        model_name=model_name,
-        api_key=api_key,
+        base_url=model.base_url,
+        model_name=model.model_name,
+        api_key=model.api_key,
         output=Path(output),
         aspect_ratio=aspect_ratio,
         image_size=image_size,
@@ -331,13 +329,11 @@ def edit(
     mask: str | None,
     input_fidelity: str | None,
 ) -> None:
-    backend, base_url, model_name, _display_name, api_key, options = resolve_model(
-        model_spec
-    )
+    model = resolve_model(model_spec)
     _validate_generate_options(
-        model_name,
-        backend,
-        options,
+        model.model_name,
+        model.backend,
+        model.options,
         aspect_ratio=aspect_ratio,
         image_size=image_size,
         grounding=grounding,
@@ -348,12 +344,12 @@ def edit(
     )
 
     backend_edit(
-        backend=backend,
+        backend=model.backend,
         prompt=prompt,
         images=[Path(p) for p in images],
-        base_url=base_url,
-        model_name=model_name,
-        api_key=api_key,
+        base_url=model.base_url,
+        model_name=model.model_name,
+        api_key=model.api_key,
         output=Path(output),
         aspect_ratio=aspect_ratio,
         image_size=image_size,
@@ -403,22 +399,20 @@ def chat(
     image_size: str | None,
     grounding: str | None,
 ) -> None:
-    backend, base_url, model_name, _display_name, api_key, options = resolve_model(
-        model_spec
-    )
+    model = resolve_model(model_spec)
 
-    if backend != "genai":
+    if model.backend != "genai":
         print(
-            f"Error: chat is not supported for {backend} backend. "
+            f"Error: chat is not supported for {model.backend} backend. "
             "Use 'imagegen generate' instead.",
             file=sys.stderr,
         )
         sys.exit(1)
 
     _validate_generate_options(
-        model_name,
-        backend,
-        options,
+        model.model_name,
+        model.backend,
+        model.options,
         aspect_ratio=aspect_ratio,
         image_size=image_size,
         grounding=grounding,
@@ -429,9 +423,9 @@ def chat(
     )
 
     run_chat(
-        base_url=base_url,
-        model_name=model_name,
-        api_key=api_key,
+        base_url=model.base_url,
+        model_name=model.model_name,
+        api_key=model.api_key,
         output_dir=Path(output_dir),
         aspect_ratio=aspect_ratio,
         image_size=image_size,

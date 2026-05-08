@@ -8,6 +8,8 @@ from importlib import resources
 from pathlib import Path
 from typing import Any
 
+from imagegen.models import ResolvedModel
+
 
 PROVIDER_FILENAME = "provider.json"
 EXAMPLE_FILENAME = "provider.json.example"
@@ -156,7 +158,7 @@ def validate_backend_option(
 
 def resolve_model(
     provider_model: str,
-) -> tuple[str, str, str, str, str, dict[str, list[str]]]:
+) -> ResolvedModel:
     parts = provider_model.split("/", maxsplit=1)
     if len(parts) != 2:
         print(
@@ -190,11 +192,19 @@ def resolve_model(
     backend = provider.get("backend", "genai")
     options = get_model_options(model_info, backend)
 
-    return (
-        backend,
-        provider["baseUrl"],
-        model_key,
-        model_info["name"],
-        provider["apiKey"],
-        options,
+    api_key = provider.get("apiKey", "")
+    if not api_key:
+        import os
+
+        env_key = os.environ.get("IMAGEGEN_API_KEY", "")
+        if env_key:
+            api_key = env_key
+
+    return ResolvedModel(
+        backend=backend,
+        base_url=provider["baseUrl"],
+        model_name=model_key,
+        display_name=model_info["name"],
+        api_key=api_key,
+        options=options,
     )
