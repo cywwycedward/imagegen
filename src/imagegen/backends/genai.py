@@ -52,10 +52,18 @@ def build_config(
     )
 
 
-def _extract_image(response: types.GenerateContentResponse, output: Path) -> None:
+def extract_parts(
+    response: types.GenerateContentResponse,
+) -> list[types.Part] | None:
+    """Extract parts from a genai response with null-safe traversal."""
     candidate = response.candidates[0] if response.candidates else None
     content = candidate.content if candidate else None
-    parts = content.parts if content else None
+    return content.parts if content else None
+
+
+def extract_and_save_image(response: types.GenerateContentResponse, output: Path) -> None:
+    """Extract first image from response and save to output path."""
+    parts = extract_parts(response)
 
     if not parts:
         print("Error: empty response from API.", file=sys.stderr)
@@ -102,7 +110,7 @@ def generate(
         config=build_config(aspect_ratio, image_size, grounding),
     )
 
-    _extract_image(response, output)
+    extract_and_save_image(response, output)
 
 
 def edit(
@@ -135,4 +143,4 @@ def edit(
         config=build_config(aspect_ratio, image_size, grounding),
     )
 
-    _extract_image(response, output)
+    extract_and_save_image(response, output)
