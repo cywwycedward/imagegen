@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import base64
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -11,6 +11,8 @@ from imagegen.backends.genai import (
     build_image_config,
     extract_and_save_image,
     extract_parts,
+    generate,
+    edit,
 )
 
 
@@ -127,3 +129,50 @@ class TestExtractAndSaveImage:
 
         with pytest.raises(SystemExit):
             extract_and_save_image(response, Path("out.png"))
+
+
+class TestGenerateApiError:
+    def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
+        """API errors should be caught and produce a clean error message, not a traceback."""
+        with patch("imagegen.backends.genai.genai") as mock_genai:
+            mock_client = MagicMock()
+            mock_genai.Client.return_value = mock_client
+            mock_client.models.generate_content.side_effect = Exception(
+                "500 Server Error"
+            )
+
+            with pytest.raises(SystemExit):
+                generate(
+                    prompt="test",
+                    base_url="https://api.test.com",
+                    model_name="model",
+                    api_key="key",
+                    output=tmp_path / "out.png",
+                )
+
+
+class TestEditApiError:
+    def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
+        """API errors should be caught and produce a clean error message, not a traceback."""
+        # Create a valid 1x1 PNG image for Pillow to open
+        from PIL import Image as PILImage
+
+        dummy_img = tmp_path / "input.png"
+        PILImage.new("RGB", (1, 1), color="red").save(dummy_img)
+
+        with patch("imagegen.backends.genai.genai") as mock_genai:
+            mock_client = MagicMock()
+            mock_genai.Client.return_value = mock_client
+            mock_client.models.generate_content.side_effect = Exception(
+                "500 Server Error"
+            )
+
+            with pytest.raises(SystemExit):
+                edit(
+                    prompt="test",
+                    images=[dummy_img],
+                    base_url="https://api.test.com",
+                    model_name="model",
+                    api_key="key",
+                    output=tmp_path / "out.png",
+                )

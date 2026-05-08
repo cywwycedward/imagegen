@@ -66,7 +66,11 @@ def generate(
     if n is not None:
         kwargs["n"] = n
 
-    response = client.images.generate(**kwargs)
+    try:
+        response = client.images.generate(**kwargs)
+    except Exception as exc:
+        print(f"Error: API request failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     if not response.data:
         print("Error: empty response from API.", file=sys.stderr)
@@ -133,7 +137,11 @@ def edit(
         num_images = n if n is not None else 1
 
         for i in range(num_images):
-            response = client.images.edit(**kwargs)
+            try:
+                response = client.images.edit(**kwargs)
+            except Exception as exc:
+                print(f"Error: API request failed: {exc}", file=sys.stderr)
+                sys.exit(1)
             image_data = response.data[0] if response.data else None
             if image_data is None:
                 print("Error: empty response from API.", file=sys.stderr)

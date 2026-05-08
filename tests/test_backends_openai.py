@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from imagegen.backends.openai import _build_client, _save_image, generate
+from imagegen.backends.openai import _build_client, _save_image, generate, edit
 
 
 class TestBuildClient:
@@ -129,6 +129,51 @@ class TestGenerate:
                 prompt="a cat",
                 base_url="",
                 model_name="model",
+                api_key="key",
+                output=tmp_path / "out.png",
+            )
+
+
+class TestGenerateApiError:
+    def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
+        """API errors should be caught and produce a clean error message, not a traceback."""
+        mock_client = MagicMock()
+        mock_client.images.generate.side_effect = Exception(
+            "400 Bad Request: Transparent background is not supported"
+        )
+
+        with (
+            patch("imagegen.backends.openai._build_client", return_value=mock_client),
+            pytest.raises(SystemExit),
+        ):
+            generate(
+                prompt="a trophy",
+                base_url="https://api.test.com",
+                model_name="gpt-image-2",
+                api_key="key",
+                output=tmp_path / "out.png",
+                background="transparent",
+            )
+
+
+class TestEditApiError:
+    def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
+        """API errors should be caught and produce a clean error message, not a traceback."""
+        dummy_img = tmp_path / "input.png"
+        dummy_img.write_bytes(b"\x89PNG\r\n\x1a\nfakeimage")
+
+        mock_client = MagicMock()
+        mock_client.images.edit.side_effect = Exception("500 Server Error")
+
+        with (
+            patch("imagegen.backends.openai._build_client", return_value=mock_client),
+            pytest.raises(SystemExit),
+        ):
+            edit(
+                prompt="edit test",
+                images=[dummy_img],
+                base_url="https://api.test.com",
+                model_name="gpt-image-2",
                 api_key="key",
                 output=tmp_path / "out.png",
             )

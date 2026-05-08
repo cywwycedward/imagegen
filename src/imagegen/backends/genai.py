@@ -106,11 +106,15 @@ def generate(
         api_key=api_key,
     )
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=build_config(aspect_ratio, image_size, grounding),
-    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=build_config(aspect_ratio, image_size, grounding),
+        )
+    except Exception as exc:
+        print(f"Error: API request failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     extract_and_save_image(response, output)
 
@@ -139,10 +143,15 @@ def edit(
         prompt,
         *pil_images,
     ]
-    response = client.models.generate_content(
-        model=model_name,
-        contents=contents,
-        config=build_config(aspect_ratio, image_size, grounding),
-    )
+
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=build_config(aspect_ratio, image_size, grounding),
+        )
+    except Exception as exc:
+        print(f"Error: API request failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
     extract_and_save_image(response, output)
