@@ -61,7 +61,9 @@ def extract_parts(
     return content.parts if content else None
 
 
-def extract_and_save_image(response: types.GenerateContentResponse, output: Path) -> None:
+def extract_and_save_image(
+    response: types.GenerateContentResponse, output: Path
+) -> None:
     """Extract first image from response and save to output path."""
     parts = extract_parts(response)
 
