@@ -63,21 +63,20 @@ def generate(
         kwargs["output_compression"] = output_compression
     if style is not None:
         kwargs["style"] = style
+    if n is not None:
+        kwargs["n"] = n
 
-    num_images = n if n is not None else 1
+    response = client.images.generate(**kwargs)
 
-    for i in range(num_images):
-        response = client.images.generate(**kwargs)
-        image_data = response.data[0] if response.data else None
-        if image_data is None:
-            print("Error: empty response from API.", file=sys.stderr)
-            sys.exit(1)
+    if not response.data:
+        print("Error: empty response from API.", file=sys.stderr)
+        sys.exit(1)
 
-        if num_images == 1:
+    for i, image_data in enumerate(response.data):
+        if len(response.data) == 1:
             target = output
         else:
             target = output.parent / f"{output.stem}_{i}{output.suffix}"
-
         _save_image(image_data.b64_json, target)
 
 
@@ -103,9 +102,11 @@ def edit(
         print("Error: at least one image is required for editing.", file=sys.stderr)
         sys.exit(1)
 
-    image_files: list[BufferedReader] = [open(img, "rb") for img in images]  # noqa: SIM115
-
+    open_files: list[BufferedReader] = []
     try:
+        image_files: list[BufferedReader] = [open(img, "rb") for img in images]  # noqa: SIM115
+        open_files.extend(image_files)
+
         kwargs: dict[str, Any] = {
             "model": model_name,
             "prompt": prompt,
@@ -123,7 +124,9 @@ def edit(
         if output_compression is not None:
             kwargs["output_compression"] = output_compression
         if mask is not None:
-            kwargs["mask"] = open(mask, "rb")  # noqa: SIM115
+            mask_file = open(mask, "rb")  # noqa: SIM115
+            open_files.append(mask_file)
+            kwargs["mask"] = mask_file
         if input_fidelity is not None:
             kwargs["input_fidelity"] = input_fidelity
 
@@ -143,5 +146,5 @@ def edit(
 
             _save_image(image_data.b64_json, target)
     finally:
-        for f in image_files:
+        for f in open_files:
             f.close()

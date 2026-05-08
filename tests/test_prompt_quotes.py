@@ -7,14 +7,15 @@ import pytest
 from click.testing import CliRunner
 
 from imagegen.cli import main
+from imagegen.models import ResolvedModel
 
-FAKE_RESOLVE: tuple[str, str, str, str, str, dict[str, list[str]]] = (
-    "genai",
-    "https://fake.api",
-    "fake-model",
-    "Fake Model",
-    "fake-key",
-    {
+FAKE_RESOLVE = ResolvedModel(
+    backend="genai",
+    base_url="https://fake.api",
+    model_name="fake-model",
+    display_name="Fake Model",
+    api_key="fake-key",
+    options={
         "aspect_ratio": [],
         "image_size": [],
         "grounding": [],
