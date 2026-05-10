@@ -19,6 +19,14 @@ from imagegen.provider import (
     validate_option,
 )
 from imagegen.session import list_sessions
+from imagegen.template import (
+    VariableSpec,
+    delete_template,
+    extract_variables,
+    list_templates,
+    load_template,
+    save_template,
+)
 
 
 @click.group()
@@ -476,3 +484,92 @@ def provider_sessions() -> None:
             s.get("created_at", ""),
         )
     console.print(table)
+
+
+@main.group()
+def template() -> None:
+    pass
+
+
+@template.command(name="list")
+def template_list() -> None:
+    console = Console()
+    templates = list_templates()
+
+    if not templates:
+        console.print("[yellow]No templates found.[/yellow]")
+        return
+
+    table = Table(show_header=True)
+    table.add_column("Name", style="cyan")
+    table.add_column("Description", style="green")
+    table.add_column("Variables", style="yellow")
+    for t in templates:
+        table.add_row(t["name"], t["description"], t["variables"])
+    console.print(table)
+
+
+@template.command(name="show")
+@click.argument("name")
+def template_show(name: str) -> None:
+    console = Console()
+    t = load_template(name)
+
+    console.print(f"[cyan]Template:[/cyan] {t.name}")
+    console.print(f"[green]Description:[/green] {t.description}")
+    console.print()
+
+    table = Table(show_header=True, title="Variables")
+    table.add_column("Variable", style="cyan")
+    table.add_column("Status", style="yellow")
+    table.add_column("Description", style="green")
+    for var_name, spec in t.variables.items():
+        if spec.required:
+            status = "(required)"
+        elif spec.default is not None:
+            status = f"default={spec.default}"
+        else:
+            status = "(required)"
+        table.add_row(f"{{{var_name}}}", status, spec.description)
+    console.print(table)
+
+    console.print()
+    console.print("[dim]Template string:[/dim]")
+    console.print(f"  {t.template}")
+
+
+@template.command(name="save")
+@click.argument("name")
+@click.option("--template", "template_str", required=True, help="Template string with {variable} placeholders")
+@click.option("--description", default="", help="Template description")
+@click.option("--var", "vars_raw", multiple=True, help="Variable spec: 'name|description' or 'name|description|default'")
+def template_save(name: str, template_str: str, description: str, vars_raw: tuple[str, ...]) -> None:
+    variables: dict[str, VariableSpec] = {}
+
+    for raw in vars_raw:
+        parts = raw.split("|")
+        if len(parts) < 2:
+            print(f"Error: --var must be 'name|description' or 'name|description|default', got: {raw}", file=sys.stderr)
+            sys.exit(1)
+        var_name = parts[0].strip()
+        var_desc = parts[1].strip()
+        var_default = parts[2].strip() if len(parts) >= 3 else None
+        variables[var_name] = VariableSpec(
+            description=var_desc,
+            default=var_default,
+            required=var_default is None,
+        )
+
+    for var_name in extract_variables(template_str):
+        if var_name not in variables:
+            variables[var_name] = VariableSpec(description="", required=True)
+
+    save_template(name, template_str, description, variables)
+    Console().print(f"[green]Template '{name}' saved.[/green]")
+
+
+@template.command(name="delete")
+@click.argument("name")
+def template_delete(name: str) -> None:
+    delete_template(name)
+    Console().print(f"[green]Template '{name}' deleted.[/green]")
