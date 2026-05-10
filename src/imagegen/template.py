@@ -100,12 +100,23 @@ def _variable_to_dict(spec: VariableSpec) -> dict[str, object]:
     return d
 
 
+def _validate_template_name(name: str) -> None:
+    if "/" in name or "\\" in name or ".." in name:
+        print(
+            f"Error: invalid template name '{name}'. "
+            "Names must not contain '/', '\\', or '..'.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+
+
 def save_template(
     name: str,
     template_str: str,
     description: str,
     variables: dict[str, VariableSpec],
 ) -> None:
+    _validate_template_name(name)
     templates_dir = get_templates_dir()
     templates_dir.mkdir(parents=True, exist_ok=True)
 
@@ -120,6 +131,7 @@ def save_template(
 
 
 def load_template(name: str) -> TemplateData:
+    _validate_template_name(name)
     path = get_templates_dir() / f"{name}.json"
     if not path.is_file():
         print(f"Error: template '{name}' not found.", file=sys.stderr)
@@ -167,6 +179,7 @@ def list_templates() -> list[dict[str, str]]:
 
 
 def delete_template(name: str) -> None:
+    _validate_template_name(name)
     path = get_templates_dir() / f"{name}.json"
     if not path.is_file():
         print(f"Error: template '{name}' not found.", file=sys.stderr)

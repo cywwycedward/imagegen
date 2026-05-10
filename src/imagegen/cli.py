@@ -578,7 +578,7 @@ def template_show(name: str) -> None:
         elif spec.default is not None:
             status = f"default={spec.default}"
         else:
-            status = "(required)"
+            status = "(optional)"
         table.add_row(f"{{{var_name}}}", status, spec.description)
     console.print(table)
 
