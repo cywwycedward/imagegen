@@ -131,6 +131,7 @@ class TestExtractAndSaveImage:
             extract_and_save_image(response, Path("out.png"))
 
 
+
 class TestGenerateApiError:
     def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
         """API errors should be caught and produce a clean error message, not a traceback."""
@@ -154,7 +155,6 @@ class TestGenerateApiError:
 class TestEditApiError:
     def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
         """API errors should be caught and produce a clean error message, not a traceback."""
-        # Create a valid 1x1 PNG image for Pillow to open
         from PIL import Image as PILImage
 
         dummy_img = tmp_path / "input.png"
