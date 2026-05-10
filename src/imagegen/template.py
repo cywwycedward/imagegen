@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -88,3 +89,86 @@ def apply_template(
     result = result.replace("{{", "{").replace("}}", "}")
 
     return result
+
+
+def _variable_to_dict(spec: VariableSpec) -> dict[str, object]:
+    d: dict[str, object] = {"description": spec.description}
+    if spec.required:
+        d["required"] = True
+    if spec.default is not None:
+        d["default"] = spec.default
+    return d
+
+
+def save_template(
+    name: str,
+    template_str: str,
+    description: str,
+    variables: dict[str, VariableSpec],
+) -> None:
+    templates_dir = get_templates_dir()
+    templates_dir.mkdir(parents=True, exist_ok=True)
+
+    data = {
+        "name": name,
+        "description": description,
+        "variables": {k: _variable_to_dict(v) for k, v in variables.items()},
+        "template": template_str,
+    }
+    path = templates_dir / f"{name}.json"
+    path.write_text(json.dumps(data, indent=4, ensure_ascii=False))
+
+
+def load_template(name: str) -> TemplateData:
+    path = get_templates_dir() / f"{name}.json"
+    if not path.is_file():
+        print(f"Error: template '{name}' not found.", file=sys.stderr)
+        sys.exit(1)
+
+    raw = json.loads(path.read_text())
+    variables: dict[str, VariableSpec] = {}
+    for k, v in raw.get("variables", {}).items():
+        spec = VariableSpec(
+            description=v.get("description", ""),
+            default=v.get("default"),
+            required=v.get("required", False),
+        )
+        # Variables without default and without explicit required=True are treated as required
+        if not spec.required and spec.default is None:
+            spec = VariableSpec(description=spec.description, default=None, required=True)
+        variables[k] = spec
+
+    return TemplateData(
+        name=raw["name"],
+        description=raw.get("description", ""),
+        template=raw["template"],
+        variables=variables,
+    )
+
+
+def list_templates() -> list[dict[str, str]]:
+    templates_dir = get_templates_dir()
+    if not templates_dir.is_dir():
+        return []
+
+    result = []
+    for path in sorted(templates_dir.glob("*.json")):
+        try:
+            raw = json.loads(path.read_text())
+            var_names = list(raw.get("variables", {}).keys())
+            result.append({
+                "name": raw.get("name", path.stem),
+                "description": raw.get("description", ""),
+                "variables": ", ".join(var_names),
+            })
+        except (json.JSONDecodeError, KeyError):
+            continue
+    return result
+
+
+def delete_template(name: str) -> None:
+    path = get_templates_dir() / f"{name}.json"
+    if not path.is_file():
+        print(f"Error: template '{name}' not found.", file=sys.stderr)
+        sys.exit(1)
+    path.unlink()
