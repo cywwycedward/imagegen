@@ -147,7 +147,9 @@ def load_template(name: str) -> TemplateData:
         )
         # Variables without default and without explicit required=True are treated as required
         if not spec.required and spec.default is None:
-            spec = VariableSpec(description=spec.description, default=None, required=True)
+            spec = VariableSpec(
+                description=spec.description, default=None, required=True
+            )
         variables[k] = spec
 
     return TemplateData(
@@ -168,11 +170,13 @@ def list_templates() -> list[dict[str, str]]:
         try:
             raw = json.loads(path.read_text())
             var_names = list(raw.get("variables", {}).keys())
-            result.append({
-                "name": raw.get("name", path.stem),
-                "description": raw.get("description", ""),
-                "variables": ", ".join(var_names),
-            })
+            result.append(
+                {
+                    "name": raw.get("name", path.stem),
+                    "description": raw.get("description", ""),
+                    "variables": ", ".join(var_names),
+                }
+            )
         except (json.JSONDecodeError, KeyError):
             continue
     return result

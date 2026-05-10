@@ -589,16 +589,31 @@ def template_show(name: str) -> None:
 
 @template.command(name="save")
 @click.argument("name")
-@click.option("--template", "template_str", required=True, help="Template string with {variable} placeholders")
+@click.option(
+    "--template",
+    "template_str",
+    required=True,
+    help="Template string with {variable} placeholders",
+)
 @click.option("--description", default="", help="Template description")
-@click.option("--var", "vars_raw", multiple=True, help="Variable spec: 'name|description' or 'name|description|default'")
-def template_save(name: str, template_str: str, description: str, vars_raw: tuple[str, ...]) -> None:
+@click.option(
+    "--var",
+    "vars_raw",
+    multiple=True,
+    help="Variable spec: 'name|description' or 'name|description|default'",
+)
+def template_save(
+    name: str, template_str: str, description: str, vars_raw: tuple[str, ...]
+) -> None:
     variables: dict[str, VariableSpec] = {}
 
     for raw in vars_raw:
         parts = raw.split("|")
         if len(parts) < 2:
-            print(f"Error: --var must be 'name|description' or 'name|description|default', got: {raw}", file=sys.stderr)
+            print(
+                f"Error: --var must be 'name|description' or 'name|description|default', got: {raw}",
+                file=sys.stderr,
+            )
             sys.exit(1)
         var_name = parts[0].strip()
         var_desc = parts[1].strip()
