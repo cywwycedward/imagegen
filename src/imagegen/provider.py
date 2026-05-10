@@ -132,12 +132,17 @@ def validate_option(
     model_key: str,
 ) -> None:
     if value not in allowed:
+        import difflib
+
         available = ", ".join(allowed)
-        print(
+        msg = (
             f"Error: {option_name} '{value}' is not supported by model '{model_key}'. "
-            f"Accepted: {available}",
-            file=sys.stderr,
+            f"Accepted: {available}"
         )
+        suggestion = difflib.get_close_matches(value, allowed, n=1, cutoff=0.4)
+        if suggestion:
+            msg += f"\n       Did you mean: {suggestion[0]}?"
+        print(msg, file=sys.stderr)
         sys.exit(1)
 
 

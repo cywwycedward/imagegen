@@ -170,3 +170,29 @@ class TestLoadProviders:
             providers = load_providers()
         assert len(providers) == 1
         assert providers[0]["name"] == "test-prov"
+
+
+class TestValidateOptionFuzzyMatch:
+    def test_suggestion_for_close_match(self, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(SystemExit):
+            validate_option("hig", ["standard", "hd", "medium"], "--quality", "gpt-image-2")
+        captured = capsys.readouterr()
+        assert "Did you mean:" in captured.err
+
+    def test_no_suggestion_for_distant_match(self, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(SystemExit):
+            validate_option("zzzzz", ["standard", "hd", "medium"], "--quality", "gpt-image-2")
+        captured = capsys.readouterr()
+        assert "Did you mean:" not in captured.err
+
+    def test_suggestion_value_is_correct(self, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(SystemExit):
+            validate_option("high", ["standard", "hd", "medium"], "--quality", "gpt-image-2")
+        captured = capsys.readouterr()
+        assert "hd" in captured.err
+
+    def test_accepted_values_still_listed(self, capsys: pytest.CaptureFixture[str]) -> None:
+        with pytest.raises(SystemExit):
+            validate_option("high", ["standard", "hd", "medium"], "--quality", "gpt-image-2")
+        captured = capsys.readouterr()
+        assert "Accepted: standard, hd, medium" in captured.err
