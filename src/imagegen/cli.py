@@ -21,6 +21,7 @@ from imagegen.provider import (
 from imagegen.session import list_sessions
 from imagegen.template import (
     VariableSpec,
+    apply_template,
     delete_template,
     extract_variables,
     list_templates,
@@ -224,6 +225,18 @@ def _validate_generate_options(
     default=None,
     help="Style (dall-e-3: vivid/natural)",
 )
+@click.option(
+    "--template",
+    "template_name",
+    default=None,
+    help="Apply a saved prompt template",
+)
+@click.option(
+    "--var",
+    "var_overrides_raw",
+    multiple=True,
+    help="Override template variable: key=value",
+)
 def generate(
     prompt: str,
     model_spec: str,
@@ -238,7 +251,19 @@ def generate(
     output_compression: int | None,
     num_images: int | None,
     style: str | None,
+    template_name: str | None,
+    var_overrides_raw: tuple[str, ...],
 ) -> None:
+    if template_name is not None:
+        tpl = load_template(template_name)
+        overrides: dict[str, str] = {}
+        for raw in var_overrides_raw:
+            if "=" not in raw:
+                print(f"Error: --var must be 'key=value', got: {raw}", file=sys.stderr)
+                sys.exit(1)
+            k, v = raw.split("=", maxsplit=1)
+            overrides[k.strip()] = v.strip()
+        prompt = apply_template(tpl, prompt=prompt, var_overrides=overrides)
     model = resolve_model(model_spec)
     _validate_generate_options(
         model.model_name,
@@ -339,6 +364,18 @@ def generate(
     default=None,
     help="Input fidelity (OpenAI: high/low)",
 )
+@click.option(
+    "--template",
+    "template_name",
+    default=None,
+    help="Apply a saved prompt template",
+)
+@click.option(
+    "--var",
+    "var_overrides_raw",
+    multiple=True,
+    help="Override template variable: key=value",
+)
 def edit(
     prompt: str,
     model_spec: str,
@@ -355,7 +392,19 @@ def edit(
     num_images: int | None,
     mask: str | None,
     input_fidelity: str | None,
+    template_name: str | None,
+    var_overrides_raw: tuple[str, ...],
 ) -> None:
+    if template_name is not None:
+        tpl = load_template(template_name)
+        overrides: dict[str, str] = {}
+        for raw in var_overrides_raw:
+            if "=" not in raw:
+                print(f"Error: --var must be 'key=value', got: {raw}", file=sys.stderr)
+                sys.exit(1)
+            k, v = raw.split("=", maxsplit=1)
+            overrides[k.strip()] = v.strip()
+        prompt = apply_template(tpl, prompt=prompt, var_overrides=overrides)
     model = resolve_model(model_spec)
     _validate_generate_options(
         model.model_name,
