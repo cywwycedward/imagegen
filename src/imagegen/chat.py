@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import sys
 from pathlib import Path
 
@@ -9,7 +8,7 @@ from google.genai import types
 from PIL import Image
 from rich.console import Console
 
-from imagegen.generate import build_config, build_image_config
+from imagegen.backends.genai import build_config, build_image_config, extract_parts
 from imagegen.session import create_session, load_session, save_turn
 
 
@@ -152,9 +151,7 @@ def run_chat(
         turn_aspect = None
         turn_size = None
 
-        candidate = response.candidates[0] if response.candidates else None
-        content = candidate.content if candidate else None
-        parts = content.parts if content else None
+        parts = extract_parts(response)
 
         if not parts:
             console.print("[yellow]Empty response.[/yellow]")
@@ -167,6 +164,8 @@ def run_chat(
             if part.inline_data is not None and part.inline_data.data is not None:
                 image_bytes = part.inline_data.data
                 if isinstance(image_bytes, str):
+                    import base64
+
                     image_bytes = base64.b64decode(image_bytes)
                 image_path = output_dir / f"turn_{turn_index:03d}.png"
                 image_path.write_bytes(image_bytes)

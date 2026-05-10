@@ -2,9 +2,8 @@ from __future__ import annotations
 
 import base64
 import sys
-from pathlib import Path
-
 from collections.abc import Callable
+from pathlib import Path
 from typing import Any
 
 from google import genai
@@ -53,10 +52,20 @@ def build_config(
     )
 
 
-def _extract_image(response: types.GenerateContentResponse, output: Path) -> None:
+def extract_parts(
+    response: types.GenerateContentResponse,
+) -> list[types.Part] | None:
+    """Extract parts from a genai response with null-safe traversal."""
     candidate = response.candidates[0] if response.candidates else None
     content = candidate.content if candidate else None
-    parts = content.parts if content else None
+    return content.parts if content else None
+
+
+def extract_and_save_image(
+    response: types.GenerateContentResponse, output: Path
+) -> None:
+    """Extract first image from response and save to output path."""
+    parts = extract_parts(response)
 
     if not parts:
         print("Error: empty response from API.", file=sys.stderr)
@@ -82,7 +91,7 @@ def _extract_image(response: types.GenerateContentResponse, output: Path) -> Non
     sys.exit(1)
 
 
-def generate_image(
+def generate(
     prompt: str,
     base_url: str,
     model_name: str,
@@ -97,16 +106,20 @@ def generate_image(
         api_key=api_key,
     )
 
-    response = client.models.generate_content(
-        model=model_name,
-        contents=prompt,
-        config=build_config(aspect_ratio, image_size, grounding),
-    )
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt,
+            config=build_config(aspect_ratio, image_size, grounding),
+        )
+    except Exception as exc:
+        print(f"Error: API request failed: {exc}", file=sys.stderr)
+        sys.exit(1)
 
-    _extract_image(response, output)
+    extract_and_save_image(response, output)
 
 
-def edit_image(
+def edit(
     prompt: str,
     images: list[Path],
     base_url: str,
@@ -130,10 +143,15 @@ def edit_image(
         prompt,
         *pil_images,
     ]
-    response = client.models.generate_content(
-        model=model_name,
-        contents=contents,
-        config=build_config(aspect_ratio, image_size, grounding),
-    )
 
-    _extract_image(response, output)
+    try:
+        response = client.models.generate_content(
+            model=model_name,
+            contents=contents,
+            config=build_config(aspect_ratio, image_size, grounding),
+        )
+    except Exception as exc:
+        print(f"Error: API request failed: {exc}", file=sys.stderr)
+        sys.exit(1)
+
+    extract_and_save_image(response, output)
