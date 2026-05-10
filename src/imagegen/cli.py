@@ -53,34 +53,53 @@ def provider_list(model: bool, options: bool) -> None:
         return
 
     if options:
-        table = Table(show_header=True)
-        table.add_column("Model ID", style="cyan")
-        table.add_column("Provider", style="green")
-        table.add_column("Backend", style="blue")
-        table.add_column("Aspect Ratio", style="yellow")
-        table.add_column("Image Size", style="yellow")
-        table.add_column("Grounding", style="yellow")
-        table.add_column("Size", style="yellow")
-        table.add_column("Quality", style="yellow")
-        table.add_column("Background", style="yellow")
-        table.add_column("Style", style="yellow")
+        genai_models = []
+        openai_models = []
         for p in providers:
             backend = p.get("backend", "genai")
             for model_key, model_info in p.get("models", {}).items():
                 opts = get_model_options(model_info, backend)
+                entry = (model_key, p["name"], backend, opts)
+                if backend == "openai":
+                    openai_models.append(entry)
+                else:
+                    genai_models.append(entry)
+
+        if genai_models:
+            table = Table(show_header=True, title="GenAI Models")
+            table.add_column("Model ID", style="cyan")
+            table.add_column("Provider", style="green")
+            table.add_column("Aspect Ratio", style="yellow")
+            table.add_column("Image Size", style="yellow")
+            table.add_column("Grounding", style="yellow")
+            for model_key, pname, _, opts in genai_models:
                 table.add_row(
                     model_key,
-                    p["name"],
-                    backend,
+                    pname,
                     ", ".join(opts["aspect_ratio"]) or "-",
                     ", ".join(opts["image_size"]) or "-",
                     ", ".join(opts["grounding"]) or "-",
+                )
+            console.print(table)
+
+        if openai_models:
+            table = Table(show_header=True, title="OpenAI Models")
+            table.add_column("Model ID", style="cyan")
+            table.add_column("Provider", style="green")
+            table.add_column("Size", style="yellow")
+            table.add_column("Quality", style="yellow")
+            table.add_column("Background", style="yellow")
+            table.add_column("Style", style="yellow")
+            for model_key, pname, _, opts in openai_models:
+                table.add_row(
+                    model_key,
+                    pname,
                     ", ".join(opts["size"]) or "-",
                     ", ".join(opts["quality"]) or "-",
                     ", ".join(opts["background"]) or "-",
                     ", ".join(opts["style"]) or "-",
                 )
-        console.print(table)
+            console.print(table)
     elif model:
         table = Table(show_header=True)
         table.add_column("Model ID", style="cyan")
