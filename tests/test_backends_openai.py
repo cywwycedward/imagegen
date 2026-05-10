@@ -134,6 +134,7 @@ class TestGenerate:
             )
 
 
+
 class TestGenerateApiError:
     def test_api_error_exits_gracefully(self, tmp_path: Path) -> None:
         """API errors should be caught and produce a clean error message, not a traceback."""
